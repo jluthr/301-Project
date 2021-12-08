@@ -23,8 +23,6 @@ esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
 
 requests.set_socket(socket, esp)
 
-
-
 if esp.status == adafruit_esp32spi.WL_IDLE_STATUS:
     print("ESP32 found and in idle mode")
 print("Firmware vers.", esp.firmware_version)
@@ -39,7 +37,6 @@ print("Connected to", str(esp.ssid, 'utf-8'), "\tRSSI:", esp.rssi)
 print("My IP address is", esp.pretty_ip(esp.ip_address))
 print("IP lookup adafruit.com: %s" % esp.pretty_ip(esp.get_host_by_name("adafruit.com")))
 print("Ping google.com: %d ms" % esp.ping("google.com"))
-#--------------------------------------------------
 
 readValue = analogio.AnalogIn(board.A0)
 led = digitalio.DigitalInOut(board.D5)
@@ -55,38 +52,25 @@ while True:
     volts = analog_voltage(readValue)
     # Print the values:
     print('Sensor value: {0} Turbidity: {1}V'.format(val, volts))
-    if volts < 4:
-        led.value = True
-    else:
-        led.value = False
-    #volts= str(volts)
     conversion = volts*2.361
-    print("CHEAT CODE = " + str(conversion))
     tds_val = (-1120.4*(conversion**2)) + (5742.3*conversion) - 4352.9
     if tds_val < 0:
         tds_val = 0
+    elif tds_val > 3000:
+        tds_val == 3000
+    # Turn on LED if dangerous TDS value
+    if tds_val > 1000:
+        led.value = True
+    else:
+        led.value = False
     tds_val = str(tds_val)
     print("Turbidity value (mg/L)" + tds_val)
+    # Posting turbidity value to ThingSpeak
     JSON_POST_URL = "https://api.thingspeak.com/update?api_key=8MPW4DVTLBMV16NZ&field1="+ tds_val
     print("POSTing data to {0}: {1}".format(JSON_POST_URL, tds_val))
     response = requests.post(JSON_POST_URL, data=tds_val)
     print('-'*40)
     time.sleep(5)
     json_resp = response.json()
-    #print("Data received from server:", json_resp['data'])
     response.close()
     time.sleep(5)
-'''
-print('-'*40)
-response.close()
-data = '31F'
-print("POSTing data to {0}: {1}".format(JSON_POST_URL, data))
-response = requests.post(JSON_POST_URL, data=data)
-print('-'*40)
-
-json_resp = response.json()
-# Parse out the 'data' key from json_resp dict.
-print("Data received from server:", json_resp['data'])
-print('-'*40)
-response.close()
-'''
